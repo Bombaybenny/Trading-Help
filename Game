@@ -21,6 +21,31 @@ if 'balance' not in st.session_state:
     st.session_state.balance = 10000
 if 'scenario_index' not in st.session_state:
     st.session_state.scenario_index = 0
+if 'theme' not in st.session_state:
+    st.session_state.theme = 'dark'
+
+# Stock selection
+stock_options = ['AVGO', 'NVDA', 'TSLA']
+selected_stock = st.sidebar.selectbox("Choose a stock to view:", stock_options)
+
+# Theme switch
+st.sidebar.markdown("### Theme")
+if st.sidebar.toggle("Dark Mode", value=st.session_state.theme == 'dark'):
+    st.session_state.theme = 'dark'
+else:
+    st.session_state.theme = 'light'
+
+# Styling
+style = 'charles' if st.session_state.theme == 'light' else 'nightclouds'
+
+# Game levels
+levels = [
+    {"level": 1, "name": "Liquidity Grab", "chart": "liquidity"},
+    {"level": 2, "name": "FVG", "chart": "fvg"},
+    {"level": 3, "name": "BOS", "chart": "bos"},
+    {"level": 4, "name": "ORB", "chart": "orb"},
+    {"level": 5, "name": "Support/Resistance", "chart": "support"}
+]
 
 scenarios = [
     {
@@ -60,14 +85,14 @@ scenarios = [
 # Generate candlestick data
 
 def generate_ohlc_data():
-    base_price = 100
+    base_price = 100 + random.randint(-10, 10)
     data = []
-    for _ in range(20):
+    for _ in range(30):
         open_price = base_price + np.random.uniform(-2, 2)
         high_price = open_price + np.random.uniform(0, 3)
         low_price = open_price - np.random.uniform(0, 3)
-        close_price = low_price + np.random.uniform(0, high_price - low_price)
-        base_price = close_price  # chain next open
+        close_price = np.random.uniform(low_price, high_price)
+        base_price = close_price
         data.append([open_price, high_price, low_price, close_price])
     df = pd.DataFrame(data, columns=['Open', 'High', 'Low', 'Close'])
     df.index = pd.date_range(end=pd.Timestamp.today(), periods=len(df), freq='T')
@@ -82,16 +107,16 @@ def plot_chart(chart_type):
     if chart_type == "liquidity":
         df.iloc[6]['High'] += 5
         df.iloc[7]['Close'] -= 6
-        title = "Liquidity Grab Example"
+        title = f"{selected_stock} - Liquidity Grab"
 
     elif chart_type == "fvg":
         df.iloc[4]['Low'] -= 4
         df.iloc[5]['High'] += 5
-        title = "FVG Example"
+        title = f"{selected_stock} - Fair Value Gap (FVG)"
 
     elif chart_type == "bos":
         df.iloc[5:] += 6
-        title = "Break of Structure (BOS)"
+        title = f"{selected_stock} - Break of Structure (BOS)"
 
     elif chart_type == "orb":
         orb_low = df.iloc[0:3]['Low'].min()
@@ -100,16 +125,21 @@ def plot_chart(chart_type):
             mpf.make_addplot([orb_low]*len(df), color='purple'),
             mpf.make_addplot([orb_high]*len(df), color='orange')
         ]
-        title = "Opening Range Breakout (ORB)"
+        title = f"{selected_stock} - Opening Range Breakout (ORB)"
+
+    elif chart_type == "support":
+        df.iloc[10:15]['Low'] -= 2
+        df.iloc[20:25]['High'] += 2
+        title = f"{selected_stock} - Support and Resistance"
 
     st.subheader(title)
-    fig, _ = mpf.plot(df, type='candle', style='charles', addplot=addplots, returnfig=True)
+    fig, _ = mpf.plot(df, type='candle', style=style, addplot=addplots, returnfig=True)
     st.pyplot(fig)
 
 # Display game UI
 
 def show_game():
-    st.title("Stock Market Game with Visual Learning")
+    st.title("📈 Stock Market Game (Learn to Trade Real Patterns)")
     st.subheader(f"Balance: ${st.session_state.balance}")
     st.markdown("---")
     st.subheader("📘 Market Concepts")
@@ -121,7 +151,7 @@ def show_game():
 
     if st.session_state.scenario_index < len(scenarios):
         scenario = scenarios[st.session_state.scenario_index]
-        st.header(scenario['name'])
+        st.header(f"Level {st.session_state.scenario_index + 1}: {scenario['name']}")
         st.write(scenario['description'])
 
         plot_chart(scenario['chart'])
@@ -137,18 +167,17 @@ def show_game():
                 result = "Wrong entry type. You entered against the setup."
                 st.session_state.balance -= 300
             elif exit_choice == "smart":
-                result = f"Smart exit at {scenario['good_exit']}!"
+                result = f"✅ Smart exit at {scenario['good_exit']}!"
                 st.session_state.balance += 500
             else:
-                result = f"Poor exit at {scenario['bad_exit']}!"
+                result = f"⚠️ Poor exit at {scenario['bad_exit']}!"
                 st.session_state.balance -= 200
 
             st.success(result)
             st.session_state.scenario_index += 1
-            st.stop()  # safe rerun alternative
-
+            st.experimental_rerun()
     else:
-        st.header("Game Over")
+        st.header("🎉 Game Over")
         st.subheader(f"Final Balance: ${st.session_state.balance}")
         if st.session_state.balance > 10000:
             st.success("Well done! You made profitable decisions.")
