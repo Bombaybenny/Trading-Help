@@ -23,10 +23,16 @@ if 'scenario_index' not in st.session_state:
     st.session_state.scenario_index = 0
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
+if 'timeframe' not in st.session_state:
+    st.session_state.timeframe = '1min/5days'
 
 # Stock selection
 stock_options = ['AVGO', 'NVDA', 'TSLA']
 selected_stock = st.sidebar.selectbox("Choose a stock to view:", stock_options)
+
+# Timeframe selection
+timeframe_options = ['1min/5days', '5min/5days', '15min/5days']
+st.session_state.timeframe = st.sidebar.selectbox("Timeframe:", timeframe_options)
 
 # Theme switch
 st.sidebar.markdown("### Theme")
@@ -38,46 +44,58 @@ else:
 # Styling
 style = 'charles' if st.session_state.theme == 'light' else 'nightclouds'
 
-# Game levels
-levels = [
-    {"level": 1, "name": "Liquidity Grab", "chart": "liquidity"},
-    {"level": 2, "name": "FVG", "chart": "fvg"},
-    {"level": 3, "name": "BOS", "chart": "bos"},
-    {"level": 4, "name": "ORB", "chart": "orb"},
-    {"level": 5, "name": "Support/Resistance", "chart": "support"}
-]
-
+# Scenarios with level-specific questions
 scenarios = [
     {
         "name": "Liquidity Grab - Short Setup",
         "description": "Price swept above previous high and closed back inside range.",
-        "entry": "short",
-        "good_exit": "at previous low",
-        "bad_exit": "holding through reversal",
+        "questions": [
+            "What is a liquidity grab?",
+            "Where did the liquidity grab occur on this chart?",
+            "What should you look for after a liquidity grab?"
+        ],
+        "answers": ["Trap beyond a high/low", "Above recent high", "Reversal setup"],
+        "correct_entry": "short",
+        "correct_exit": "smart",
         "chart": "liquidity"
     },
     {
         "name": "FVG Long Setup",
         "description": "Price pulled into FVG and bounced.",
-        "entry": "long",
-        "good_exit": "at supply zone",
-        "bad_exit": "holding through FVG close",
+        "questions": [
+            "What defines a Fair Value Gap?",
+            "Where is the imbalance in this chart?",
+            "What typically happens after price enters an FVG?"
+        ],
+        "answers": ["Gap between candles", "Middle of the run", "Continuation"],
+        "correct_entry": "long",
+        "correct_exit": "smart",
         "chart": "fvg"
     },
     {
         "name": "BOS Confirmation",
         "description": "Structure broke to upside after a higher low.",
-        "entry": "long",
-        "good_exit": "at next swing high",
-        "bad_exit": "entering before BOS",
+        "questions": [
+            "What is a Break of Structure?",
+            "Where is the BOS in this chart?",
+            "What does BOS signal?"
+        ],
+        "answers": ["Break of high/low", "After higher low", "Trend change"],
+        "correct_entry": "long",
+        "correct_exit": "smart",
         "chart": "bos"
     },
     {
         "name": "ORB Failure",
         "description": "Price broke opening range high but reversed hard.",
-        "entry": "long",
-        "good_exit": "quick scalp on breakout",
-        "bad_exit": "holding during pullback",
+        "questions": [
+            "What is the Opening Range?",
+            "Where is the breakout?",
+            "What would confirm failure?"
+        ],
+        "answers": ["First few minutes", "Above high", "Strong rejection"],
+        "correct_entry": "long",
+        "correct_exit": "smart",
         "chart": "orb"
     }
 ]
@@ -132,7 +150,7 @@ def plot_chart(chart_type):
         df.iloc[20:25]['High'] += 2
         title = f"{selected_stock} - Support and Resistance"
 
-    st.subheader(title)
+    st.subheader(title + f" | {st.session_state.timeframe}")
     fig, _ = mpf.plot(df, type='candle', style=style, addplot=addplots, returnfig=True)
     st.pyplot(fig)
 
@@ -156,21 +174,24 @@ def show_game():
 
         plot_chart(scenario['chart'])
 
-        entry = st.radio("Choose your entry:", ["long", "short", "skip"], key=f"entry_{st.session_state.scenario_index}")
-        exit_choice = st.radio("Choose your exit strategy:", ["smart", "greedy"], key=f"exit_{st.session_state.scenario_index}")
+        for i, q in enumerate(scenario['questions']):
+            st.radio(q, ["Select one...", scenario['answers'][i]], key=f"q_{st.session_state.scenario_index}_{i}")
+
+        entry = st.radio("What's the correct entry for this setup?", ["long", "short", "skip"], key=f"entry_{st.session_state.scenario_index}")
+        exit_choice = st.radio("Best exit strategy:", ["smart", "greedy"], key=f"exit_{st.session_state.scenario_index}")
 
         if st.button("Submit Decision"):
             result = ""
             if entry == "skip":
                 result = "Skipped the trade."
-            elif entry != scenario['entry']:
+            elif entry != scenario['correct_entry']:
                 result = "Wrong entry type. You entered against the setup."
                 st.session_state.balance -= 300
-            elif exit_choice == "smart":
-                result = f"✅ Smart exit at {scenario['good_exit']}!"
+            elif exit_choice == scenario['correct_exit']:
+                result = "✅ Smart exit!"
                 st.session_state.balance += 500
             else:
-                result = f"⚠️ Poor exit at {scenario['bad_exit']}!"
+                result = "⚠️ Poor exit."
                 st.session_state.balance -= 200
 
             st.success(result)
@@ -186,4 +207,3 @@ def show_game():
 
 if __name__ == '__main__':
     show_game()
-
