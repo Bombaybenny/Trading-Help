@@ -44,16 +44,17 @@ else:
 # Styling
 style = 'charles' if st.session_state.theme == 'light' else 'nightclouds'
 
-# Scenarios with level-specific questions and multiple-choice options
+# Scenarios with level-specific questions
 scenarios = [
     {
         "name": "Liquidity Grab - Short Setup",
         "description": "Price swept above previous high and closed back inside range.",
         "questions": [
-            {"question": "What is a liquidity grab?", "options": ["Trap beyond a high/low", "Breakout confirmation", "Support formation"], "answer": "Trap beyond a high/low"},
-            {"question": "Where did the liquidity grab occur on this chart?", "options": ["Above recent high", "Below recent low", "At open"], "answer": "Above recent high"},
-            {"question": "What should you look for after a liquidity grab?", "options": ["Reversal setup", "Volume drop", "Sideways movement"], "answer": "Reversal setup"}
+            "What is a liquidity grab?",
+            "Where did the liquidity grab occur on this chart?",
+            "What should you look for after a liquidity grab?"
         ],
+        "answers": ["Trap beyond a high/low", "Above recent high", "Reversal setup"],
         "correct_entry": "short",
         "correct_exit": "smart",
         "chart": "liquidity"
@@ -62,10 +63,11 @@ scenarios = [
         "name": "FVG Long Setup",
         "description": "Price pulled into FVG and bounced.",
         "questions": [
-            {"question": "What defines a Fair Value Gap?", "options": ["Gap between candles", "Volume spike", "Moving average crossover"], "answer": "Gap between candles"},
-            {"question": "Where is the imbalance in this chart?", "options": ["Middle of the run", "At the top", "Near close"], "answer": "Middle of the run"},
-            {"question": "What typically happens after price enters an FVG?", "options": ["Continuation", "Rejection", "Sideways trend"], "answer": "Continuation"}
+            "What defines a Fair Value Gap?",
+            "Where is the imbalance in this chart?",
+            "What typically happens after price enters an FVG?"
         ],
+        "answers": ["Gap between candles", "Middle of the run", "Continuation"],
         "correct_entry": "long",
         "correct_exit": "smart",
         "chart": "fvg"
@@ -74,10 +76,11 @@ scenarios = [
         "name": "BOS Confirmation",
         "description": "Structure broke to upside after a higher low.",
         "questions": [
-            {"question": "What is a Break of Structure?", "options": ["Break of high/low", "Reversal pattern", "Volume confirmation"], "answer": "Break of high/low"},
-            {"question": "Where is the BOS in this chart?", "options": ["After higher low", "Before resistance", "At support"], "answer": "After higher low"},
-            {"question": "What does BOS signal?", "options": ["Trend change", "Pullback", "Breakout fakeout"], "answer": "Trend change"}
+            "What is a Break of Structure?",
+            "Where is the BOS in this chart?",
+            "What does BOS signal?"
         ],
+        "answers": ["Break of high/low", "After higher low", "Trend change"],
         "correct_entry": "long",
         "correct_exit": "smart",
         "chart": "bos"
@@ -86,10 +89,11 @@ scenarios = [
         "name": "ORB Failure",
         "description": "Price broke opening range high but reversed hard.",
         "questions": [
-            {"question": "What is the Opening Range?", "options": ["First few minutes", "Midday session", "Closing bell"], "answer": "First few minutes"},
-            {"question": "Where is the breakout?", "options": ["Above high", "Below low", "At VWAP"], "answer": "Above high"},
-            {"question": "What would confirm failure?", "options": ["Strong rejection", "Higher close", "Large volume"], "answer": "Strong rejection"}
+            "What is the Opening Range?",
+            "Where is the breakout?",
+            "What would confirm failure?"
         ],
+        "answers": ["First few minutes", "Above high", "Strong rejection"],
         "correct_entry": "long",
         "correct_exit": "smart",
         "chart": "orb"
@@ -119,13 +123,13 @@ def plot_chart(chart_type):
     addplots = []
 
     if chart_type == "liquidity":
-        df.iloc[6, df.columns.get_loc('High')] += 5
-        df.iloc[7, df.columns.get_loc('Close')] -= 6
+        df.iloc[6]['High'] += 5
+        df.iloc[7]['Close'] -= 6
         title = f"{selected_stock} - Liquidity Grab"
 
     elif chart_type == "fvg":
-        df.iloc[4, df.columns.get_loc('Low')] -= 4
-        df.iloc[5, df.columns.get_loc('High')] += 5
+        df.iloc[4]['Low'] -= 4
+        df.iloc[5]['High'] += 5
         title = f"{selected_stock} - Fair Value Gap (FVG)"
 
     elif chart_type == "bos":
@@ -142,8 +146,8 @@ def plot_chart(chart_type):
         title = f"{selected_stock} - Opening Range Breakout (ORB)"
 
     elif chart_type == "support":
-        df.iloc[10:15, df.columns.get_loc('Low')] -= 2
-        df.iloc[20:25, df.columns.get_loc('High')] += 2
+        df.iloc[10:15]['Low'] -= 2
+        df.iloc[20:25]['High'] += 2
         title = f"{selected_stock} - Support and Resistance"
 
     st.subheader(title + f" | {st.session_state.timeframe}")
@@ -171,10 +175,10 @@ def show_game():
         plot_chart(scenario['chart'])
 
         for i, q in enumerate(scenario['questions']):
-            st.radio(q["question"], q["options"], key=f"q_{st.session_state.scenario_index}_{i}")
+            st.radio(q, ["Select one...", scenario['answers'][i]], key=f"q_{st.session_state.scenario_index}_{i}")
 
-        entry = st.radio("Choose your entry:", ["long", "short", "skip"], key=f"entry_{st.session_state.scenario_index}")
-        exit_choice = st.radio("Choose your exit strategy:", ["smart", "greedy"], key=f"exit_{st.session_state.scenario_index}")
+        entry = st.radio("What's the correct entry for this setup?", ["long", "short", "skip"], key=f"entry_{st.session_state.scenario_index}")
+        exit_choice = st.radio("Best exit strategy:", ["smart", "greedy"], key=f"exit_{st.session_state.scenario_index}")
 
         if st.button("Submit Decision"):
             result = ""
@@ -192,7 +196,7 @@ def show_game():
 
             st.success(result)
             st.session_state.scenario_index += 1
-            st.rerun()
+            st.experimental_rerun()
     else:
         st.header("🎉 Game Over")
         st.subheader(f"Final Balance: ${st.session_state.balance}")
